@@ -1,58 +1,23 @@
-# Public and Private Boundary
+# Project Boundary
 
-This project is the public reader experience only. Keep it safe to publish.
+English Reader is built as a public web app first. It can run locally with the bundled sample content, and it can optionally connect to an API for account features, reading sync, uploaded books, and dictionary enrichment.
 
-## Allowed in this repository
-
-- Reader UI and responsive layout
-- Demo book content
-- Public API client functions
-- Login and registration UI
-- Public authentication API contract
-- Cloudflare Pages configuration
-- Documentation for deployment boundaries
-
-## Not allowed in this repository
-
-- Cloudflare Worker source that stores user data
-- Password hashing, token signing, or account persistence code
-- Admin dashboard source
-- Database schema, migrations, or SQL dumps
-- R2, KV, D1, Neon, Supabase, or translation provider secrets
-- Private bucket names or internal service names
-- Real user exports, logs, analytics dumps, or backups
-
-## API rule
-
-The public site may know only one public base URL:
+The main idea is simple:
 
 ```txt
-VITE_PUBLIC_API_BASE=https://demo-api.example.com
+English Reader web app
+  -> optional API
+  -> your own account, sync, storage, and dictionary services
 ```
 
-The actual implementation behind that URL must be deployed separately.
+For contributors, that means frontend work belongs here: reading UI, bookshelf interactions, local import behavior, word-card UX, public API client code, and documentation.
 
-## Recommended runtime split
+Backend choices are intentionally left open. A hosted app might use Cloudflare, Supabase, Firebase, a custom server, or something else entirely. Keep credentials, user content, provider keys, and operational data in whichever backend environment you control, not in the frontend repository.
 
-```txt
-Cloudflare Pages
-  Public reader website
+Before publishing a fork, run:
 
-Cloudflare Worker
-  Public API
-  Authenticated user API
-  Translation proxy
-  Storage and database access
-
-Cloudflare Access
-  Private admin website and admin APIs
+```bash
+npm run check
 ```
 
-## Review checklist before publishing
-
-- No `.env.local` or `*.local` files are committed
-- No database URLs are present
-- No API keys are present
-- No Worker source code for user-data persistence is present
-- No admin URLs are documented in public README copy
-- `VITE_PUBLIC_API_BASE` points to demo or public-safe API behavior
+That command includes a lightweight boundary scan, linting, and a production build.
