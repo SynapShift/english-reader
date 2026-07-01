@@ -27,16 +27,6 @@ Browser
   -> Optional API for accounts, sync, uploads, and dictionaries
 ```
 
-## Public Book Files
-
-Public-domain or sample books can be published as versioned static JSON files under `public/books`.
-
-Current sample book artifact:
-
-- `public/books/pride-and-prejudice.v1.json`
-
-Keep `book.id` stable across versions so reading progress remains attached to the same book. When text is corrected or regenerated, publish a new file such as `pride-and-prejudice.v2.json` and update only the public metadata pointer.
-
 ## Local Development
 
 ```bash
