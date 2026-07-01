@@ -2,8 +2,6 @@
 
 English Reader is a responsive web reader for reading English books page by page, looking up words inline, and collecting vocabulary cards.
 
-The repository contains the public web app only. User accounts, password storage, uploaded books, reading progress sync, vocabulary sync, dictionary provider keys, and admin tools must live in a separate private API service.
-
 ## Features
 
 - Mobile and desktop reading layout
@@ -21,28 +19,13 @@ The repository contains the public web app only. User accounts, password storage
 
 ## Architecture
 
+The app is designed as a lightweight frontend that can work on its own for local reading, while leaving room for a separate API when you want account sync, uploaded-book storage, or richer dictionary services.
+
 ```txt
 Browser
-  -> Public web app
-  -> Optional public API gateway
-  -> Private services for auth, storage, sync, dictionaries, and admin tools
+  -> English Reader web app
+  -> Optional API for accounts, sync, uploads, and dictionaries
 ```
-
-This repository may include:
-
-- Reader UI and client-side interactions
-- Public-domain sample book files
-- API client functions and public API contracts
-- Deployment documentation for the public web app
-
-This repository must not include:
-
-- Password hashing or token signing implementation
-- User database schema, migrations, dumps, or backups
-- Cloudflare Worker source for user-data storage
-- R2, KV, D1, database URLs, provider keys, or secrets
-- Admin dashboard source or private admin routes
-- Real user uploads, logs, exports, or analytics dumps
 
 ## Public Book Files
 
@@ -90,7 +73,7 @@ The repository includes `public/_headers`, which Cloudflare Pages can publish as
 
 ## Privacy Boundary
 
-Login, registration, sync, and upload flows are intentionally frontend-only in this repository. The public app can call a backend, but the backend implementation must be kept in a separate private repository or private deployment.
+This project keeps the public reader app separate from backend account and storage services. The frontend can call an API, but credentials, user content, provider keys, and operational data should stay in your own backend environment.
 
 See:
 
