@@ -1,81 +1,47 @@
 # Cloudflare Pages Deployment
 
-Use Cloudflare Pages for the public reader website.
+English Reader is a Vite app, so it can be deployed to Cloudflare Pages or any static hosting provider.
 
-## Recommended setup
+## Recommended Settings
 
 ```txt
-Project type: Pages
 Framework preset: Vite
 Build command: npm run build
 Build output directory: dist
 Production branch: main
 ```
 
-Environment variable:
+Optional environment variable:
 
 ```txt
-VITE_PUBLIC_API_BASE=https://demo-api.example.com
+VITE_PUBLIC_API_BASE=https://api.example.com
 ```
 
-Only use public-safe values in Pages environment variables. Never add database URLs, R2 credentials, API provider secrets, JWT secrets, or admin hostnames.
+Leave `VITE_PUBLIC_API_BASE` unset if you only want the local-reading experience.
 
-## Public repository flow
+## Deploy From GitHub
 
-1. Create a public repository for this project.
-2. Push only the public reader source.
-3. Connect the repository to Cloudflare Pages.
-4. Configure the build settings above.
-5. Add `VITE_PUBLIC_API_BASE` only if a public-safe API exists.
-6. Deploy.
-7. Put the public site URL in the README.
+1. Push the repository to GitHub.
+2. Create a Cloudflare Pages project.
+3. Connect the repository.
+4. Use the Vite settings above.
+5. Deploy.
 
-## API split
+## Response Headers
 
-For a public deployment, prefer a public-safe API gateway:
+The `public/_headers` file adds basic browser-side hardening when deployed on Cloudflare Pages:
 
-```txt
-reader.example.com
-  -> demo-api.example.com
-  -> public books, rate-limited translation, account entry points
-```
+- Blocks framing
+- Disables unused browser permissions
+- Keeps scripts and assets scoped to expected origins
+- Allows HTTPS API calls
 
-Keep sensitive implementation details private:
+If you connect a custom API or asset host later, update the Content Security Policy deliberately rather than using a broad wildcard.
 
-```txt
-reader.example.com
-  -> api.example.com
-  -> authenticated user data, real persistence
-```
+## Preflight Check
 
-## Headers
-
-Cloudflare Pages will publish `public/_headers` as response headers.
-
-Current goals:
-
-- Block framing
-- Disable unused browser permissions
-- Restrict script and asset origins
-- Keep API calls HTTPS-only
-
-If a future feature needs another origin, add it deliberately to the Content Security Policy instead of using a broad wildcard.
-
-## Before each public deploy
-
-Run:
+Before publishing changes, run:
 
 ```bash
 npm run check
-```
-
-Then review:
-
-```txt
-No .env.local committed
-No storage implementation committed
-No admin source committed
-No Worker source committed
-No real user data committed
-No secrets in Pages environment variables
 ```
