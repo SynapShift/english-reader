@@ -1,24 +1,18 @@
 # Public API Contract
 
-This contract describes the HTTPS API surface that the public reader may call.
-
-The implementation must live outside this repository, usually in separately deployed Cloudflare Workers. Do not add Worker source, storage code, database schema, migrations, or secrets to this public site.
-
-## Base URL
-
-The public site reads the base URL from:
+English Reader can work without an API for local reading. If you want account login, synced progress, uploaded books, or a stronger dictionary, point the app at an API with:
 
 ```txt
-VITE_PUBLIC_API_BASE=https://demo-api.example.com
+VITE_PUBLIC_API_BASE=https://api.example.com
 ```
 
-The value should point to a public-safe API gateway. It must not reveal internal hostnames, admin routes, private bucket names, or database details.
+The API can be implemented with any stack. The shapes below describe what the frontend expects.
 
-## GET /public/books
+## Books
 
-Returns public book summaries for the bookshelf.
+### GET /public/books
 
-Response:
+Returns book summaries for the bookshelf.
 
 ```json
 [
@@ -33,18 +27,9 @@ Response:
 ]
 ```
 
-Rules:
+### GET /public/books/:bookId
 
-- Return only public, listed books
-- Do not include storage bucket names
-- Do not include original source file paths
-- Do not include unpublished admin metadata
-
-## GET /public/books/:bookId
-
-Returns public reading content for one book.
-
-Response:
+Returns display-ready reading content.
 
 ```json
 {
@@ -53,31 +38,21 @@ Response:
   "author": "Frances Hodgson Burnett",
   "level": "B1",
   "summary": "A quiet classic for building vocabulary around nature.",
-  "coverUrl": "https://assets.example.com/covers/secret-garden.jpg",
   "chapters": [
     {
       "id": "chapter-1",
       "title": "Chapter 1",
-      "order": 1,
-      "content": [
-        "When Mary Lennox was sent to Misselthwaite Manor..."
-      ]
+      "content": ["When Mary Lennox was sent to Misselthwaite Manor..."]
     }
   ]
 }
 ```
 
-Rules:
+## Dictionary
 
-- Return display-ready content only
-- Keep source files and import metadata private
-- Apply any copyright or licensing restrictions before returning content
+### POST /translate
 
-## POST /translate
-
-Returns a word translation.
-
-Request:
+Looks up a selected word.
 
 ```json
 {
@@ -88,8 +63,6 @@ Request:
 }
 ```
 
-Response:
-
 ```json
 {
   "word": "curiosity",
@@ -99,19 +72,11 @@ Response:
 }
 ```
 
-Rules:
+## Account
 
-- Rate limit by IP, user, or session
-- Cache common results in the private API layer
-- Do not expose provider keys to the browser
-- Do not return internal provider logs
-- Dictionary providers, caching, and bilingual enrichment belong in the private API layer
+### POST /auth/register
 
-## POST /auth/register
-
-Creates an account.
-
-Request:
+Creates an account and returns a session token.
 
 ```json
 {
@@ -119,8 +84,6 @@ Request:
   "password": "at-least-8-characters"
 }
 ```
-
-Response:
 
 ```json
 {
@@ -132,49 +95,18 @@ Response:
 }
 ```
 
-Rules:
+### POST /auth/login
 
-- Do not implement password storage in this public repository
-- Do not expose password hashes, salts, database bindings, or token signing logic
-- Return only user-safe account fields
+Signs in an existing account. The response shape matches registration.
 
-## POST /auth/login
+### GET /auth/me
 
-Signs in an existing account.
-
-Request:
-
-```json
-{
-  "email": "reader@example.com",
-  "password": "at-least-8-characters"
-}
-```
-
-Response:
-
-```json
-{
-  "token": "session-token",
-  "user": {
-    "id": "user-id",
-    "email": "reader@example.com"
-  }
-}
-```
-
-## GET /auth/me
-
-Returns the current signed-in user.
-
-Headers:
+Returns the signed-in user.
 
 ```txt
 Authorization: Bearer session-token
 ```
 
-Response:
-
 ```json
 {
   "user": {
@@ -184,11 +116,9 @@ Response:
 }
 ```
 
-## Authenticated endpoints
+## Future Sync Endpoints
 
-Authenticated user endpoints can exist behind the same API gateway, but they must still be implemented outside this repository.
-
-Examples:
+These endpoints are natural next steps for a hosted version:
 
 ```txt
 GET /me/progress
@@ -199,42 +129,4 @@ DELETE /me/vocabulary/:word
 POST /me/books/import
 ```
 
-Rules:
-
-- Require authentication
-- Use CORS allowlists
-- Never trust client-provided user IDs
-- Keep persistence, authorization, and schema details private
-
-## POST /me/books/import
-
-Uploads a user-owned book file or text payload. This endpoint must be implemented in a private Cloudflare Worker or another private backend, not in this public repository.
-
-Request options:
-
-```txt
-multipart/form-data with file
-application/json with title and text
-```
-
-Response:
-
-```json
-{
-  "bookId": "user-book-123",
-  "status": "processing"
-}
-```
-
-Rules:
-
-- Require authentication
-- Enforce file size limits
-- Accept only supported formats such as PDF, TXT, Markdown, and later EPUB
-- Store original files in private object storage
-- Run parsing, OCR when needed, moderation, and copyright checks outside the public frontend
-- Return only user-safe status data to the browser
-
-## Admin endpoints
-
-Do not expose admin endpoint names in this repository. Admin behavior should live behind a separate private hostname protected by Cloudflare Access.
+Keep responses focused on data the reader UI needs: book status, page progress, saved words, and safe display metadata.
