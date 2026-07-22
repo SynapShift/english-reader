@@ -15,11 +15,20 @@ import {
   User,
   X,
 } from 'lucide-react'
-import { type CSSProperties, type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  type CSSProperties,
+  type FormEvent,
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import './App.css'
 import { demoBooks, demoDictionary } from './data/demoContent'
 import { importBookFile } from './lib/bookImport'
 import { getCurrentUser, hasPublicApiBase, login, register, translateWord } from './lib/apiClient'
+import { lookupPublicDictionary } from './lib/publicDictionary'
 import type { AuthUser } from './lib/apiClient'
 import type { Book, Translation } from './types/reader'
 
@@ -73,9 +82,9 @@ function App() {
   const [lineHeight, setLineHeight] = useState(1.76)
   const [pageWidth, setPageWidth] = useState(820)
   const [selectedWord, setSelectedWord] = useState<Translation | null>(null)
-  const [translationStatus, setTranslationStatus] = useState<'idle' | 'loading' | 'demo' | 'api'>(
-    'idle',
-  )
+  const [translationStatus, setTranslationStatus] = useState<
+    'idle' | 'loading' | 'demo' | 'api' | 'public'
+  >('idle')
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<AuthMode>('login')
@@ -187,19 +196,22 @@ function App() {
     setSelectedWord(fallbackTranslation)
     setTranslationStatus('demo')
 
-    if (!hasPublicApiBase()) {
-      return
-    }
-
     setTranslationStatus('loading')
 
     try {
-      const apiTranslation = await translateWord({
-        word,
-        context: findContextSentence(word, selectedChapter.content),
-        bookId: selectedBook.id,
-        chapterId: selectedChapter.id,
-      })
+      const apiTranslation = hasPublicApiBase()
+        ? await translateWord({
+            word,
+            context: findContextSentence(word, selectedChapter.content),
+            bookId: selectedBook.id,
+            chapterId: selectedChapter.id,
+          })
+        : await lookupPublicDictionary(word)
+
+      if (!apiTranslation) {
+        throw new Error('No dictionary entry found.')
+      }
+
       setSelectedWord({
         word: apiTranslation.word,
         phonetic: apiTranslation.phonetic ?? '',
@@ -208,12 +220,30 @@ function App() {
           apiTranslation.example ||
           findContextSentence(word, selectedChapter.content) ||
           'Keep reading to see how this word is used in context.',
-        source: 'api',
+        source: hasPublicApiBase() ? 'api' : 'public',
       })
-      setTranslationStatus('api')
+      setTranslationStatus(hasPublicApiBase() ? 'api' : 'public')
     } catch {
-      setSelectedWord(fallbackTranslation)
-      setTranslationStatus('demo')
+      try {
+        const publicTranslation = await lookupPublicDictionary(word)
+        if (!publicTranslation) {
+          throw new Error('No public dictionary entry found.')
+        }
+        setSelectedWord({
+          word: publicTranslation.word,
+          phonetic: publicTranslation.phonetic ?? '',
+          meaning: publicTranslation.meaning,
+          example:
+            publicTranslation.example ||
+            findContextSentence(word, selectedChapter.content) ||
+            'Keep reading to see how this word is used in context.',
+          source: 'public',
+        })
+        setTranslationStatus('public')
+      } catch {
+        setSelectedWord(fallbackTranslation)
+        setTranslationStatus('demo')
+      }
     }
   }
 
@@ -287,14 +317,35 @@ function App() {
     setAuthMessage('')
   }
 
+  function closeWordCardOnBlankClick(event: MouseEvent<HTMLElement>) {
+    if (!selectedWord) {
+      return
+    }
+
+    const target = event.target
+    if (!(target instanceof HTMLElement)) {
+      return
+    }
+
+    const isInteractiveClick = target.closest(
+      '.word, .reader-word-dock, .settings-panel, .toolbar, .page-actions, button, input, label',
+    )
+
+    if (!isInteractiveClick) {
+      setSelectedWord(null)
+    }
+  }
+
   const wordCardSource =
     translationStatus === 'loading'
       ? '查词中'
       : selectedWord?.source === 'api'
         ? '英汉词典'
-        : selectedWord?.source === 'placeholder'
-          ? '暂未收录'
-          : '本地词卡'
+        : selectedWord?.source === 'public'
+          ? '在线词典'
+          : selectedWord?.source === 'placeholder'
+            ? '暂未收录'
+            : '本地词卡'
   const pageLabel = `Page ${chapterIndex + 1} of ${selectedBook.chapters.length}`
 
   return (
@@ -507,6 +558,7 @@ function App() {
         <section
           className={`tab-panel reader-area ${selectedWord ? 'has-word-dock' : ''}`}
           aria-label="Reader"
+          onClick={closeWordCardOnBlankClick}
           style={readerStyle}
         >
           <header className="reader-topbar">

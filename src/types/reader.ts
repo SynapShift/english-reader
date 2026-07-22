@@ -20,5 +20,5 @@ export type Translation = {
   phonetic: string
   meaning: string
   example: string
-  source?: 'demo' | 'api' | 'placeholder'
+  source?: 'demo' | 'api' | 'public' | 'placeholder'
 }
