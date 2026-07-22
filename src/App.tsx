@@ -193,9 +193,7 @@ function App() {
 
     const fallbackTranslation = getFallbackTranslation(word)
 
-    setSelectedWord(fallbackTranslation)
-    setTranslationStatus('demo')
-
+    setSelectedWord(getLoadingTranslation(word))
     setTranslationStatus('loading')
 
     try {
@@ -275,6 +273,16 @@ function App() {
         source: 'placeholder',
       }
     )
+  }
+
+  function getLoadingTranslation(word: string): Translation {
+    return {
+      word,
+      phonetic: '',
+      meaning: '正在查词...',
+      example: findContextSentence(word, selectedChapter.content) || 'Looking up this word.',
+      source: 'placeholder',
+    }
   }
 
   async function handleBookFileImport(file: File) {
